@@ -2,20 +2,22 @@ export type UserRole = 'PLAYER' | 'ORGANIZER' | 'ADMIN'
 
 export interface User {
   id: string
+  firebaseUserId: string
   first: string
   last: string
-  nickname: string
+  nickname: string | null
   phone: string
+  email: string | null
   role: UserRole
-  email?: string
-  createdAt?: Date
-  updatedAt?: Date
+  createdAt: string
+  updatedAt: string
 }
 
 export const useUserStore = defineStore('user', () => {
   // State
   const currentUser = ref<User | null>(null)
   const isLoggedIn = ref(false)
+  const isLoading = ref(false)
 
   // Getters
   const currentUserRole = computed((): UserRole | null => {
@@ -27,7 +29,7 @@ export const useUserStore = defineStore('user', () => {
     return `${currentUser.value.first} ${currentUser.value.last}`.trim()
   })
 
-  const nickname = computed((): string => {
+  const displayName = computed((): string => {
     if (!currentUser.value) return ''
     return currentUser.value.nickname || fullName.value
   })
@@ -36,34 +38,54 @@ export const useUserStore = defineStore('user', () => {
   const isOrganizer = computed(() => currentUserRole.value === 'ORGANIZER')
   const isAdmin = computed(() => currentUserRole.value === 'ADMIN')
 
+  const needsProfileSetup = computed(() => {
+    return currentUser.value?.first === 'New' && currentUser.value?.last === 'User'
+  })
+
   // Actions
   const login = (userData: User) => {
     currentUser.value = userData
     isLoggedIn.value = true
+    isLoading.value = false
   }
 
   const logout = () => {
     currentUser.value = null
     isLoggedIn.value = false
+    isLoading.value = false
+    clearStorage()
   }
 
-  const updateUser = (updates: Partial<Omit<User, 'id'>>) => {
-    if (currentUser.value) {
-      currentUser.value = {
-        ...currentUser.value,
-        ...updates,
-        updatedAt: new Date()
-      }
+  const updateUser = async (updates: Partial<Omit<User, 'id' | 'firebaseUserId' | 'createdAt'>>) => {
+    if (!currentUser.value) return
+
+    try {
+      isLoading.value = true
+      
+             const response = await $fetch<User>('/api/auth/user', {
+         method: 'PATCH',
+         body: {
+           ...updates,
+           firebaseUserId: currentUser.value.firebaseUserId
+         }
+       })
+
+      currentUser.value = response
+      return response
+    } catch (error) {
+      console.error('Error updating user:', error)
+      throw error
+    } finally {
+      isLoading.value = false
     }
   }
 
-  const updateProfile = (profileData: {
+  const updateProfile = async (profileData: {
     first?: string
     last?: string
     nickname?: string
-    phone?: string
   }) => {
-    updateUser(profileData)
+    return await updateUser(profileData)
   }
 
   const hasPermission = (requiredRole: UserRole): boolean => {
@@ -81,7 +103,7 @@ export const useUserStore = defineStore('user', () => {
   const canManageUsers = computed(() => hasPermission('ORGANIZER'))
   const canManageSystem = computed(() => hasPermission('ADMIN'))
 
-  // Persistence (optional - for development/demo purposes)
+  // Persistence
   const saveToStorage = () => {
     if (process.client) {
       localStorage.setItem('user', JSON.stringify({
@@ -121,16 +143,18 @@ export const useUserStore = defineStore('user', () => {
     // State
     currentUser: readonly(currentUser),
     isLoggedIn: readonly(isLoggedIn),
+    isLoading: readonly(isLoading),
     
     // Getters
     currentUserRole,
     fullName,
-    nickname,
+    displayName,
     isPlayer,
     isOrganizer,
     isAdmin,
     canManageUsers,
     canManageSystem,
+    needsProfileSetup,
     
     // Actions
     login,

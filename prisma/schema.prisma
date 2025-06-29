@@ -2,27 +2,294 @@
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
-  provider = "prisma-client"
-  output   = "../generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
+// User model based on the user store fields
 model User {
-  id    Int     @id @default(autoincrement())
-  email String  @unique
-  name  String?
-  posts Post[]
+  id             String   @id @default(cuid())
+  firebaseUserId String   @unique
+  phone          String   @unique // E.164 format
+  first          String
+  last           String
+  nickname       String?
+  email          String?
+  role           UserRole @default(PLAYER)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Event relationships
+  organizedEvents    Event[]           @relation("EventOrganizer")
+  managedEvents      Event[]           @relation("EventManager")
+  registrations      Registration[]
+  gameParticipations GamePlayer[]
+  phaseSeedings      PhaseSeeding[]
+  seedingBucketItems SeedingBucketItem[]
+
+  @@map("users")
 }
 
-model Post {
-  id        Int     @id @default(autoincrement())
-  title     String
-  content   String?
-  published Boolean @default(false)
-  author    User    @relation(fields: [authorId], references: [id])
-  authorId  Int
+// Location model with optional fields and courts
+model Location {
+  id              String  @id @default(cuid())
+  name            String
+  address         String?
+  googleLocationId String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  courts Court[]
+  events Event[]
+
+  @@map("locations")
+}
+
+model Court {
+  id         String   @id @default(cuid())
+  locationId String
+  name       String   // Court number or name
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  location Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  games    Game[]
+
+  @@map("courts")
+}
+
+// Flexible event format configuration
+model EventFormat {
+  id            String @id @default(cuid())
+  name          String
+  playerCounts  Json   // Array of numbers that this format supports [2, 4, 6]
+  config        Json   // Flexible config for format-specific settings
+  description   String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  events Event[]
+
+  @@map("event_formats")
+}
+
+// Main event model
+model Event {
+  id                 String      @id @default(cuid())
+  name               String
+  date               DateTime    // Event date
+  startTime          DateTime    // Event start time
+  endTime            DateTime    // Event end time
+  shareKey           String      @unique @default(cuid())
+  minPlayers         Int
+  maxPlayers         Int
+  playersCanOrganize Boolean     @default(false)
+  status             EventStatus @default(PLANNED)
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+
+  // Foreign keys
+  organizerId     String
+  locationId      String
+  eventFormatId   String
+
+  // Relationships
+  organizer     User           @relation("EventOrganizer", fields: [organizerId], references: [id])
+  location      Location       @relation(fields: [locationId], references: [id])
+  eventFormat   EventFormat    @relation(fields: [eventFormatId], references: [id])
+  managers      User[]         @relation("EventManager")
+  registrations Registration[]
+  phases        Phase[]
+
+  @@map("events")
+}
+
+// User registration for events
+model Registration {
+  id        String             @id @default(cuid())
+  eventId   String
+  userId    String
+  status    RegistrationStatus @default(INVITED)
+  confirmed Boolean            @default(false) // true = confirmed spot, false = waitlist
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, userId])
+  @@map("registrations")
+}
+
+// Flexible phase system for events
+model Phase {
+  id              String          @id @default(cuid())
+  eventId         String
+  name            String
+  order           Int             // Phase order within the event
+  seedingStrategy SeedingStrategy
+  seedingConfig   Json?           // Additional config for seeding strategy
+  status          PhaseStatus     @default(PLANNED)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  event        Event         @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  games        Game[]
+  phaseSeeding PhaseSeeding[]
+
+  @@unique([eventId, order])
+  @@map("phases")
+}
+
+// Seeding within a phase
+model PhaseSeeding {
+  id      String @id @default(cuid())
+  phaseId String
+  userId  String
+  seed    Int
+  notes   String?
+
+  phase Phase @relation(fields: [phaseId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([phaseId, userId])
+  @@unique([phaseId, seed])
+  @@map("phase_seeding")
+}
+
+// Game model for matches/games within phases
+model Game {
+  id          String     @id @default(cuid())
+  phaseId     String
+  courtId     String?
+  name        String?    // Game identifier (e.g., "Semifinal 1")
+  startTime   DateTime?
+  endTime     DateTime?
+  status      GameStatus @default(SCHEDULED)
+  result      Json?      // Flexible result structure
+  notes       String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  phase   Phase        @relation(fields: [phaseId], references: [id], onDelete: Cascade)
+  court   Court?       @relation(fields: [courtId], references: [id])
+  players GamePlayer[]
+  teams   Team[]
+
+  @@map("games")
+}
+
+// Junction table for game participants
+model GamePlayer {
+  id       String  @id @default(cuid())
+  gameId   String
+  userId   String
+  teamId   String? // Optional for team-based games
+  position Int?    // Position/order within the game
+
+  game Game  @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  team Team? @relation(fields: [teamId], references: [id])
+
+  @@unique([gameId, userId])
+  @@map("game_players")
+}
+
+// Team model for team-based formats
+model Team {
+  id      String @id @default(cuid())
+  gameId  String
+  name    String
+  color   String?
+  order   Int?
+
+  game    Game         @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  players GamePlayer[]
+
+  @@map("teams")
+}
+
+// Persistent seeding buckets for seasons/leagues/rankings
+model SeedingBucket {
+  id          String             @id @default(cuid())
+  name        String
+  description String?
+  config      Json?              // Configuration for seeding logic
+  isActive    Boolean            @default(true)
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  items SeedingBucketItem[]
+
+  @@map("seeding_buckets")
+}
+
+// Individual seeding within a bucket
+model SeedingBucketItem {
+  id              String  @id @default(cuid())
+  seedingBucketId String
+  userId          String
+  seed            Int
+  rating          Float?  // Optional rating/score
+  wins            Int     @default(0)
+  losses          Int     @default(0)
+  metadata        Json?   // Additional stats/info
+
+  seedingBucket SeedingBucket @relation(fields: [seedingBucketId], references: [id], onDelete: Cascade)
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([seedingBucketId, userId])
+  @@unique([seedingBucketId, seed])
+  @@map("seeding_bucket_items")
+}
+
+// Enums
+enum UserRole {
+  PLAYER
+  ORGANIZER
+  ADMIN
+}
+
+enum EventStatus {
+  PLANNED
+  ACTIVE
+  FINISHED
+  CANCELLED
+}
+
+enum RegistrationStatus {
+  INVITED
+  MAYBE
+  OUT
+  IN
+  CANCELLED
+  NO_SHOW
+}
+
+enum PhaseStatus {
+  PLANNED
+  ACTIVE
+  FINISHED
+  CANCELLED
+}
+
+enum GameStatus {
+  SCHEDULED
+  IN_PROGRESS
+  FINISHED
+  CANCELLED
+  POSTPONED
+}
+
+enum SeedingStrategy {
+  RANDOM
+  PREVIOUS_PHASE
+  SEEDING_BUCKET
+  MANUAL
+  RATING_BASED
+  WINS_LOSSES
 }

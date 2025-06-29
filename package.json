@@ -7,24 +7,33 @@
     "dev": "nuxt dev",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
-    "postinstall": "nuxt prepare"
+    "postinstall": "nuxt prepare",
+    "create-formats": "tsx scripts/create-doubles-moneyball-format.ts",
+    "db:seed": "tsx scripts/seed-database.ts",
+    "db:migrate": "prisma migrate dev",
+    "db:generate": "prisma generate",
+    "db:setup": "pnpm run db:migrate && pnpm run create-formats && pnpm run db:seed"
   },
   "dependencies": {
-    "@nuxt/eslint": "^1.4.1",
     "@nuxt/ui-pro": "^3.2.0",
     "@pinia/nuxt": "^0.11.1",
     "@prisma/client": "^6.10.1",
     "@prisma/nuxt": "^0.3.0",
-    "@tailwindcss/vite": "^4.1.6",
-    "eslint-plugin-nuxt": "^4.0.0",
     "firebase": "^10.14.1",
     "nuxt": "^3.17.5",
     "nuxt-vuefire": "^1.0.5",
+    "tailwind-merge": "^3.3.0",
+    "vue": "^3.5.13",
+    "vuefire": "^3.2.1",
+    "zod": "^3.25.67"
+  },
+  "devDependencies": {
+    "@nuxt/eslint": "^1.4.1",
+    "@tailwindcss/vite": "^4.1.6",
+    "eslint-plugin-nuxt": "^4.0.0",
     "postcss": "^8.5.3",
     "prisma": "^6.10.1",
-    "tailwind-merge": "^3.3.0",
     "tailwindcss": "^4.1.6",
-    "vue": "^3.5.13",
-    "vuefire": "^3.2.1"
+    "tsx": "^4.7.0"
   }
 }

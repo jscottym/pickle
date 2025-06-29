@@ -40,9 +40,6 @@ export default defineNuxtConfig({
       appId: process.env.FIREBASE_APP_ID,
       storageBucket: process.env.FIREBASE_STORAGE_BUCKET || `${process.env.FIREBASE_PROJECT_ID}.appspot.com`,
       messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID,
-    },
-    admin: {
-      serviceAccount: undefined
     }
   },
 })

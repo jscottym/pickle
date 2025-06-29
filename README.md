@@ -1,42 +1,143 @@
-# Pickle
+# Pickle - Event Management App
 
-A modern Nuxt application with the latest stack:
+A Nuxt.js application for managing pickle/sports events with Firebase phone authentication.
 
-- **Nuxt UI Pro v3** - Premium UI components with Tailwind CSS v4
-- **Pinia** - State management for Vue
-- **Prisma** - Next-generation ORM for database access
+## Features
+
+- 🔐 Firebase Phone Authentication with SMS verification
+- 👥 User management with roles (Player, Organizer, Admin)
+- 📱 Beautiful UI with Nuxt UI Pro components
+- 🗄️ PostgreSQL database with Prisma ORM
+- 🎯 PIN input verification using Nuxt UI Pro PinInput component
 
 ## Setup
 
-1. Install dependencies:
+### Prerequisites
 
-```bash
-pnpm install
-```
+- Node.js 18+
+- PostgreSQL database
+- Firebase project with Phone Authentication enabled
 
-2. Set up environment variables:
+### Installation
 
-```bash
-# Create .env file with:
-DATABASE_URL="postgresql://username:password@localhost:5432/pickle_db?schema=public"
+1. Clone the repository
+2. Install dependencies:
 
-# Optional: If you have a Nuxt UI Pro license
-NUXT_UI_PRO_LICENSE="your-license-key-here"
-```
+   ```bash
+   pnpm install
+   ```
 
-3. Initialize Prisma (first time setup):
+3. Set up your environment variables:
 
-```bash
-# This will be handled automatically when you run dev for the first time
-pnpm dev
-```
+   ```bash
+   cp .env.example .env
+   ```
 
-## Development
+   Fill in your Firebase and database configuration:
+
+   ```env
+   # Database
+   DATABASE_URL="postgresql://username:password@localhost:5432/pickle"
+
+   # Firebase
+   FIREBASE_API_KEY="your-api-key"
+   FIREBASE_AUTH_DOMAIN="your-project.firebaseapp.com"
+   FIREBASE_PROJECT_ID="your-project-id"
+   FIREBASE_APP_ID="your-app-id"
+   FIREBASE_STORAGE_BUCKET="your-project-id.appspot.com"
+   FIREBASE_MESSAGING_SENDER_ID="your-sender-id"
+   ```
+
+4. Set up the database:
+   ```bash
+   pnpm run db:setup
+   ```
+
+### Firebase Configuration
+
+1. Create a Firebase project at [Firebase Console](https://console.firebase.google.com)
+2. Enable Phone Authentication:
+   - Go to Authentication > Sign-in method
+   - Enable Phone authentication
+   - Add your domain to authorized domains
+3. Get your Firebase config from Project Settings > General
+
+### Development
 
 Start the development server:
 
 ```bash
-pnpm dev
+pnpm run dev
+```
+
+Visit `http://localhost:3000`
+
+## Authentication Flow
+
+1. **Phone Input**: User enters their phone number
+2. **SMS Verification**: Firebase sends SMS with 6-digit code
+3. **PIN Input**: User enters verification code using Nuxt UI Pro PinInput
+4. **User Creation**: System finds or creates user in database
+5. **Profile Setup**: New users complete their profile information
+
+## Phone Authentication Features
+
+- ✅ E.164 phone number formatting
+- ✅ SMS verification with 6-digit PIN input
+- ✅ Resend verification code with timer
+- ✅ Invisible reCAPTCHA
+- ✅ Error handling with user-friendly messages
+- ✅ Automatic user creation/linking in database
+- ✅ Auth state persistence
+- ✅ Protected routes with middleware
+
+## Database Schema
+
+The User model includes:
+
+- `firebaseUserId`: Links to Firebase Auth user
+- `phone`: E.164 formatted phone number
+- `first`, `last`, `nickname`: User profile information
+- `role`: PLAYER, ORGANIZER, or ADMIN
+- `email`: Optional email address
+
+## Available Scripts
+
+- `pnpm run dev` - Start development server
+- `pnpm run build` - Build for production
+- `pnpm run db:setup` - Set up database with migrations and seed data
+- `pnpm run db:migrate` - Run database migrations
+- `pnpm run db:seed` - Seed database with sample data
+
+## Tech Stack
+
+- **Framework**: Nuxt 3
+- **UI**: Nuxt UI Pro
+- **Database**: PostgreSQL + Prisma
+- **Authentication**: Firebase Auth (Phone)
+- **Styling**: Tailwind CSS
+- **State Management**: Pinia
+
+## Project Structure
+
+```
+├── components/
+│   ├── app/           # App-specific components
+│   ├── layout/        # Layout components
+│   ├── shared/        # Shared components
+│   └── text/          # Typography components
+├── composables/
+│   └── useFirebaseAuth.ts  # Firebase auth composable
+├── middleware/
+│   ├── auth.ts        # Protected route middleware
+│   └── guest.ts       # Guest-only middleware
+├── pages/
+│   ├── login.vue      # Phone auth login page
+│   ├── profile/       # Profile pages
+│   └── ...
+├── server/api/auth/   # Authentication API endpoints
+├── stores/            # Pinia stores
+└── prisma/           # Database schema and migrations
 ```
 
 ## Stack Details
