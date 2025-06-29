@@ -1,18 +1,11 @@
 <script setup lang="ts">
-const userStore = useUserStore();
-const colorMode = useColorMode();
+
 </script>
 
 <template>
   <div class="min-h-screen w-full bg-gray-50 dark:bg-gray-900">
-    <ImpersonationBanner />
     <div
       class="transition-all duration-200 min-w-full"
-      :style="{
-        paddingTop: userStore.isImpersonating
-          ? 'var(--impersonation-banner-height)'
-          : '0',
-      }"
     >
       <AppNav />
       <main class="main-content w-full">
@@ -24,8 +17,6 @@ const colorMode = useColorMode();
 
 <style>
 :root {
-  --impersonation-banner-height: 2.25rem; /* 36px - equivalent to top-9/pt-9 */
-  --impersonation-banner-z-index: 50;
   --nav-z-index: 40;
   --ui-header-height: 3rem;
 
@@ -61,7 +52,6 @@ const colorMode = useColorMode();
 /* lg (1024px+) */
 @media (min-width: 1024px) {
   :root {
-    --impersonation-banner-height: 3rem; /* 48px - equivalent to top-12/pt-12 */
     --ui-header-height: 3.5rem;
 
     --layout-padding-top: 1.5rem; /* 24px */

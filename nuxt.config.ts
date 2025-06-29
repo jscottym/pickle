@@ -23,6 +23,12 @@ export default defineNuxtConfig({
     storesDirs: ['./stores/**']
   },
 
+  imports: {
+    dirs: [
+      'stores/**'
+    ]
+  },
+
   ssr: false,
 
   vuefire: {
