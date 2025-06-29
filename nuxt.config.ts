@@ -1,26 +1,42 @@
 import tailwindcss from '@tailwindcss/vite'
 
-// https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
   compatibilityDate: '2025-05-15',
   devtools: { enabled: true },
   
-  // Add modules in the correct order - using basic setup first
   modules: [
+    '@nuxt/eslint',
     '@nuxt/ui-pro',
-    '@pinia/nuxt'
+    '@pinia/nuxt',
+    'nuxt-vuefire'
   ],
   
-  // Add CSS file
   css: ['~/assets/css/main.css'],
   
-  // Configure Tailwind 4 via Vite plugin
   vite: {
-    plugins: [tailwindcss()]
+    plugins: [
+      tailwindcss()
+    ]
   },
   
-  // Configure Pinia
   pinia: {
     storesDirs: ['./stores/**']
-  }
+  },
+
+  ssr: false,
+
+  vuefire: {
+    auth: true,
+    config: {
+      apiKey: process.env.FIREBASE_API_KEY,
+      authDomain: process.env.FIREBASE_AUTH_DOMAIN,
+      projectId: process.env.FIREBASE_PROJECT_ID,
+      appId: process.env.FIREBASE_APP_ID,
+      storageBucket: process.env.FIREBASE_STORAGE_BUCKET || `${process.env.FIREBASE_PROJECT_ID}.appspot.com`,
+      messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID,
+    },
+    admin: {
+      serviceAccount: undefined
+    }
+  },
 })
