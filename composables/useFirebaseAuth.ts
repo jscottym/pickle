@@ -79,9 +79,9 @@ export const usePhoneAuth = () => {
       }
       
       try {
-        // Create RecaptchaVerifier for Firebase v9+
-        // The constructor takes: auth, containerOrId, parameters
-        recaptchaVerifier.value = new RecaptchaVerifier(auth, 'recaptcha-container', {
+        // Create RecaptchaVerifier for Firebase v10
+        // Pass the actual DOM element instead of string ID
+        recaptchaVerifier.value = new RecaptchaVerifier(auth, recaptchaContainer, {
           size: 'invisible',
           callback: () => {
             console.log('reCAPTCHA solved')
