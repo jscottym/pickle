@@ -17,29 +17,29 @@
           @submit="onSubmit"
           class="space-y-4"
         >
-          <UFormGroup label="First Name" name="first" required>
+          <UFormField label="First Name" name="first" required>
             <UInput
               v-model="formData.first"
               placeholder="Enter your first name"
               :disabled="isLoading"
             />
-          </UFormGroup>
+          </UFormField>
 
-          <UFormGroup label="Last Name" name="last" required>
+          <UFormField label="Last Name" name="last" required>
             <UInput
               v-model="formData.last"
               placeholder="Enter your last name"
               :disabled="isLoading"
             />
-          </UFormGroup>
+          </UFormField>
 
-          <UFormGroup label="Nickname (Optional)" name="nickname">
+          <UFormField label="Nickname (Optional)" name="nickname">
             <UInput
               v-model="formData.nickname"
               placeholder="How should we call you?"
               :disabled="isLoading"
             />
-          </UFormGroup>
+          </UFormField>
 
           <UButton
             type="submit"
@@ -68,8 +68,7 @@
 import { z } from 'zod'
 
 definePageMeta({
-  layout: 'blank',
-  middleware: 'auth'
+  layout: 'blank'
 })
 
 const userStore = useUserStore()

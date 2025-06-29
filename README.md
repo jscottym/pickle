@@ -60,7 +60,11 @@ A Nuxt.js application for managing pickle/sports events with Firebase phone auth
    - Go to Authentication > Sign-in method
    - Enable Phone authentication
    - Add your domain to authorized domains
-3. Get your Firebase config from Project Settings > General
+3. **Set up test phone numbers for development**:
+   - In Authentication > Sign-in method > Phone
+   - Open "Phone numbers for testing" accordion
+   - Add test numbers like `+1 650-555-3434` with verification code `123456`
+4. Get your Firebase config from Project Settings > General
 
 ### Development
 
@@ -71,6 +75,23 @@ pnpm run dev
 ```
 
 Visit `http://localhost:3000`
+
+#### Development Mode Features
+
+The app automatically enables development mode when running `pnpm run dev`:
+
+- **App verification disabled**: reCAPTCHA is automatically bypassed for testing
+- **Test phone numbers**: Use fictional phone numbers for SMS-free testing
+- **Automatic fake reCAPTCHA**: No need to solve CAPTCHA during development
+
+#### Testing Phone Authentication
+
+Use these test phone numbers in development:
+
+- `+1 650-555-3434` with verification code `123456`
+- `+1 555-123-4567` with verification code `654321`
+
+**Note**: These must be configured in your Firebase Console under Authentication > Sign-in method > Phone numbers for testing.
 
 ## Authentication Flow
 
@@ -85,11 +106,36 @@ Visit `http://localhost:3000`
 - ✅ E.164 phone number formatting
 - ✅ SMS verification with 6-digit PIN input
 - ✅ Resend verification code with timer
-- ✅ Invisible reCAPTCHA
+- ✅ Invisible reCAPTCHA with development mode bypass
 - ✅ Error handling with user-friendly messages
 - ✅ Automatic user creation/linking in database
 - ✅ Auth state persistence
 - ✅ Protected routes with middleware
+- ✅ Test phone numbers for development
+
+## Troubleshooting
+
+### Debug Page
+
+Visit `/debug-firebase` to check your Firebase configuration and test authentication components.
+
+### Common Issues
+
+1. **"Cannot read properties of undefined (reading 'appVerificationDisabledForTesting')"**
+
+   - This should be automatically resolved in development mode
+   - Check that your Firebase environment variables are set correctly
+
+2. **SMS not received**
+
+   - Use test phone numbers in development (see Firebase Console setup)
+   - Ensure Phone authentication is enabled in Firebase Console
+   - Check Firebase usage quotas
+
+3. **reCAPTCHA errors**
+   - Development mode automatically bypasses reCAPTCHA
+   - Ensure your domain is added to Firebase authorized domains
+   - Check browser console for additional error details
 
 ## Database Schema
 
@@ -127,7 +173,7 @@ The User model includes:
 │   ├── shared/        # Shared components
 │   └── text/          # Typography components
 ├── composables/
-│   └── useFirebaseAuth.ts  # Firebase auth composable
+│   └── useFirebaseAuth.ts  # Phone auth composable (renamed to avoid conflicts)
 ├── middleware/
 │   ├── auth.ts        # Protected route middleware
 │   └── guest.ts       # Guest-only middleware

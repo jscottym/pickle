@@ -22,8 +22,10 @@
 </template>
 
 <script setup lang="ts">
+import { usePhoneAuth } from '~/composables/useFirebaseAuth'
+
 const userStore = useUserStore()
-const { signOut } = useFirebaseAuth()
+const { signOut } = usePhoneAuth()
 
 const items = [
   [{

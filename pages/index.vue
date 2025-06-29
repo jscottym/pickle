@@ -1,4 +1,8 @@
 <script setup lang="ts">
+definePageMeta({
+  public: true
+})
+
 const counterStore = useCounterStore()
 const userStore = useUserStore()
 

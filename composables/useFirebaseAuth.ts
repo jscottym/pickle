@@ -1,10 +1,10 @@
+import { getApp } from 'firebase/app'
 import {
-    signOut as firebaseSignOut,
-    onAuthStateChanged,
-    RecaptchaVerifier,
-    signInWithPhoneNumber,
-    type ConfirmationResult,
-    type User as FirebaseUser
+  getAuth,
+  RecaptchaVerifier,
+  signInWithPhoneNumber,
+  type ConfirmationResult,
+  type User as FirebaseUser
 } from 'firebase/auth'
 
 interface UserData {
@@ -20,33 +20,101 @@ interface UserData {
   updatedAt: string
 }
 
-export const useFirebaseAuth = () => {
-  const nuxtApp = useNuxtApp()
+export const usePhoneAuth = () => {
   const userStore = useUserStore()
   const recaptchaVerifier = ref<RecaptchaVerifier | null>(null)
+  
+  // Use VueFire's current user for auth state watching
+  const currentUser = useCurrentUser()
 
-  // Get Firebase auth instance safely
-  const getAuth = () => {
-    return nuxtApp.$auth
+  // Get the underlying Firebase Auth instance
+  const getFirebaseAuth = () => {
+    try {
+      // Use the Firebase app initialized by VueFire
+      const app = getApp()
+      return getAuth(app)
+    } catch (error) {
+      console.error('Error getting Firebase Auth instance:', error)
+      return null
+    }
   }
 
-  // Initialize reCAPTCHA
-  const initializeRecaptcha = () => {
-    if (process.client && !recaptchaVerifier.value) {
-      recaptchaVerifier.value = new RecaptchaVerifier($auth, 'recaptcha-container', {
-        size: 'invisible',
-        callback: () => {
-          // reCAPTCHA solved
-        },
-        'expired-callback': () => {
-          // Response expired
+  // Setup development mode (disable app verification for testing)
+  const setupDevelopmentMode = () => {
+    if (import.meta.client && import.meta.dev) {
+      const auth = getFirebaseAuth()
+      if (auth) {
+        try {
+          // For Firebase v9+, we need to use connectAuthEmulator or just skip this
+          // The appVerificationDisabledForTesting property doesn't exist in newer versions
+          console.log('🔧 Development mode: Using production reCAPTCHA (Firebase v9+)')
+        } catch (error) {
+          console.warn('Development mode setup:', error)
         }
-      })
+      }
+    }
+  }
+
+  // Initialize reCAPTCHA - simplified for development mode
+  const initializeRecaptcha = () => {
+    if (import.meta.client && !recaptchaVerifier.value) {
+      // Get the underlying Firebase Auth instance
+      const auth = getFirebaseAuth()
+      if (!auth) {
+        throw new Error('Firebase auth not initialized. Please check your Firebase configuration.')
+      }
+      
+      // Setup development mode first
+      setupDevelopmentMode()
+      
+      // Wait for DOM to be ready and get the element
+      let recaptchaContainer = document.getElementById('recaptcha-container')
+      if (!recaptchaContainer) {
+        // If container doesn't exist, create it dynamically
+        const container = document.createElement('div')
+        container.id = 'recaptcha-container'
+        container.style.display = 'none'
+        document.body.appendChild(container)
+        recaptchaContainer = container
+      }
+      
+      try {
+        // Create RecaptchaVerifier for Firebase v9+
+        // The constructor takes: auth, containerOrId, parameters
+        recaptchaVerifier.value = new RecaptchaVerifier(auth, 'recaptcha-container', {
+          size: 'invisible',
+          callback: () => {
+            console.log('reCAPTCHA solved')
+          },
+          'expired-callback': () => {
+            console.log('reCAPTCHA expired')
+          }
+        })
+        
+        console.log('RecaptchaVerifier initialized successfully')
+      } catch (error) {
+        console.error('Error initializing RecaptchaVerifier:', error)
+        console.error('Error details:', error)
+        throw new Error('Failed to initialize reCAPTCHA verifier')
+      }
     }
   }
 
   // Format phone number to E.164 format
   const formatPhoneNumber = (phone: string): string => {
+    // In development mode, allow test numbers
+    if (import.meta.dev && phone.includes('555')) {
+      // Ensure test numbers are properly formatted
+      const cleaned = phone.replace(/\D/g, '')
+      if (cleaned.length === 10) {
+        return `+1${cleaned}`
+      }
+      if (cleaned.length === 11 && cleaned.startsWith('1')) {
+        return `+${cleaned}`
+      }
+      return phone.startsWith('+') ? phone : `+${cleaned}`
+    }
+
     // Remove all non-digit characters
     const cleaned = phone.replace(/\D/g, '')
     
@@ -72,6 +140,13 @@ export const useFirebaseAuth = () => {
   // Sign in with phone number
   const signInWithPhone = async (phoneNumber: string): Promise<ConfirmationResult> => {
     try {
+      // Get the underlying Firebase Auth instance
+      const auth = getFirebaseAuth()
+      if (!auth) {
+        throw new Error('Firebase auth not initialized. Please check your Firebase configuration.')
+      }
+      
+      console.log('Initializing reCAPTCHA...')
       initializeRecaptcha()
       
       if (!recaptchaVerifier.value) {
@@ -79,12 +154,20 @@ export const useFirebaseAuth = () => {
       }
 
       const formattedPhone = formatPhoneNumber(phoneNumber)
+      console.log('Sending SMS to:', formattedPhone)
+      
+      // Show development mode info
+      if (import.meta.dev && formattedPhone.includes('555')) {
+        console.log('🔧 Using test phone number in development mode')
+      }
+      
       const confirmationResult = await signInWithPhoneNumber(
-        $auth,
+        auth,
         formattedPhone,
         recaptchaVerifier.value
       )
       
+      console.log('SMS sent successfully')
       return confirmationResult
     } catch (error: any) {
       console.error('Error sending phone verification:', error)
@@ -110,10 +193,14 @@ export const useFirebaseAuth = () => {
     }
   }
 
-  // Sign out
+  // Sign out using the underlying Firebase Auth
   const signOut = async () => {
     try {
-      await firebaseSignOut($auth)
+      const auth = getFirebaseAuth()
+      if (!auth) {
+        throw new Error('Firebase auth not initialized')
+      }
+      await auth.signOut()
       userStore.logout()
     } catch (error: any) {
       console.error('Error signing out:', error)
@@ -164,25 +251,23 @@ export const useFirebaseAuth = () => {
     }
   }
 
-  // Setup auth state listener
+  // Watch for auth state changes using VueFire's currentUser
   const setupAuthListener = () => {
-    if (process.client) {
-      onAuthStateChanged($auth, async (firebaseUser) => {
-        if (firebaseUser) {
-          try {
-            // User is signed in, get or create user data
-            const userData = await createOrFindUser(firebaseUser)
-            userStore.login(userData)
-          } catch (error) {
-            console.error('Error handling auth state change:', error)
-            userStore.logout()
-          }
-        } else {
-          // User is signed out
+    watch(currentUser, async (firebaseUser) => {
+      if (firebaseUser) {
+        try {
+          // User is signed in, get or create user data
+          const userData = await createOrFindUser(firebaseUser)
+          userStore.login(userData)
+        } catch (error) {
+          console.error('Error handling auth state change:', error)
           userStore.logout()
         }
-      })
-    }
+      } else {
+        // User is signed out
+        userStore.logout()
+      }
+    }, { immediate: true })
   }
 
   return {
@@ -191,6 +276,7 @@ export const useFirebaseAuth = () => {
     signOut,
     createOrFindUser,
     setupAuthListener,
-    formatPhoneNumber
+    formatPhoneNumber,
+    currentUser: readonly(currentUser)
   }
 } 

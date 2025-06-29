@@ -1,10 +1,6 @@
 <script setup lang="ts">
 import { z } from 'zod'
 
-definePageMeta({
-  middleware: 'auth'
-})
-
 const userStore = useUserStore()
 
 const schema = z.object({
@@ -107,47 +103,47 @@ watch(() => userStore.currentUser, () => {
         @submit="onSubmit"
         class="space-y-4"
       >
-        <UFormGroup label="First Name" name="first" required>
+        <UFormField label="First Name" name="first" required>
           <UInput
             v-model="formData.first"
             placeholder="Enter your first name"
             :disabled="isLoading"
           />
-        </UFormGroup>
+        </UFormField>
 
-        <UFormGroup label="Last Name" name="last" required>
+        <UFormField label="Last Name" name="last" required>
           <UInput
             v-model="formData.last"
             placeholder="Enter your last name"
             :disabled="isLoading"
           />
-        </UFormGroup>
+        </UFormField>
 
-        <UFormGroup label="Nickname" name="nickname">
+        <UFormField label="Nickname" name="nickname">
           <UInput
             v-model="formData.nickname"
             placeholder="How should we call you?"
             :disabled="isLoading"
           />
-        </UFormGroup>
+        </UFormField>
 
-        <UFormGroup label="Phone Number" name="phone">
+        <UFormField label="Phone Number" name="phone">
           <UInput
             v-model="formData.phone"
             type="tel"
             disabled
             help="Phone number cannot be changed"
           />
-        </UFormGroup>
+        </UFormField>
 
-        <UFormGroup label="Email" name="email">
+        <UFormField label="Email" name="email">
           <UInput
             v-model="formData.email"
             type="email"
             placeholder="Enter your email (optional)"
             :disabled="isLoading"
           />
-        </UFormGroup>
+        </UFormField>
 
         <div class="flex justify-between items-center pt-4">
           <UBadge :color="roleColor" variant="soft">
